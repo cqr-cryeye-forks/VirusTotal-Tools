@@ -1,5 +1,8 @@
 import requests
 import time
+
+import argparse
+import hashlib
 from typing import Any, Dict
 
 # requests setup
@@ -7,7 +10,13 @@ requests.urllib3.disable_warnings()
 client = requests.session()
 client.verify = False
 
-apikey = input('Enter your API key: ')
+
+def compute_filehash(filepath: str, algorithm: str = 'sha256') -> str:
+    hasher = hashlib.new(algorithm)
+    with open(filepath, 'rb') as file:
+        while chunk := file.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 def get_hash_report(apikey: str, filehash: str) -> None:
@@ -50,6 +59,11 @@ def parse_hash_report(response: Dict[str, Any]) -> None:
 
 
 if __name__ == '__main__':
-    while True:
-        filehash = input('Enter a file hash: \n')
-        get_hash_report(apikey, filehash)
+    parser = argparse.ArgumentParser(description="VirusTotal Hash Report Fetcher")
+    parser.add_argument('--apikey', type=str, required=True, help='Your VirusTotal API key')
+    parser.add_argument('--filepath', type=str, required=True, help='The path to the file to compute hash for')
+
+    args = parser.parse_args()
+    filehash = compute_filehash(args.filepath)
+    print(f'Computed hash: {filehash}')
+    get_hash_report(args.apikey, filehash)

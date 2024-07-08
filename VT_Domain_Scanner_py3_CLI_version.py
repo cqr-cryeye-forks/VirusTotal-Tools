@@ -1,30 +1,13 @@
 __author__ = 'Matthew Clairmont'
-__version__ = '1.2'
+__version__ = '1.3'
 __date__ = 'July 8, 2024'
 
 import os
 import csv
 import time
 import requests
+import argparse
 from typing import List, Dict, Optional
-
-
-def get_api_key() -> str:
-    return input('Enter your API key: ')
-
-
-def get_api_type() -> str:
-    while True:
-        apitype = input('Is this a public or private API key? ').lower()
-        if apitype in ['public', 'private']:
-            return apitype
-        else:
-            print('Valid answers are "public" or "private".')
-
-
-def get_filepath() -> str:
-    return input('Enter path to domains file. File must contain only domains and be on individual lines: ')
-
 
 def domain_scanner(domain: str, apikey: str) -> Optional[Dict[str, str]]:
     url = 'https://www.virustotal.com/vtapi/v2/url/scan'
@@ -41,7 +24,6 @@ def domain_scanner(domain: str, apikey: str) -> Optional[Dict[str, str]]:
     except requests.RequestException as e:
         print(f'Error scanning domain {domain}: {e}')
         return None
-
 
 def domain_report_reader(domain: str, apikey: str, delay: bool) -> Optional[List[str]]:
     if delay:
@@ -71,12 +53,18 @@ def domain_report_reader(domain: str, apikey: str, delay: bool) -> Optional[List
         print(f'Error retrieving report for {domain}: {e}')
         return None
 
-
 def main():
-    apikey = get_api_key()
-    apitype = get_api_type()
+    parser = argparse.ArgumentParser(description="VirusTotal Domain Scanner")
+    parser.add_argument('--apikey', type=str, required=True, help='Your VirusTotal API key')
+    parser.add_argument('--apitype', type=str, choices=['public', 'private'], required=True, help='Type of your API key')
+    parser.add_argument('--domains_file', type=str, required=True, help='Path to the file containing domains')
+
+    args = parser.parse_args()
+    apikey = args.apikey
+    apitype = args.apitype
+    domains_file = args.domains_file
+
     sleeptime = 1 if apitype == 'private' else 15
-    filepath = get_filepath()
 
     if os.path.exists('results.csv'):
         os.remove('results.csv')
@@ -87,7 +75,7 @@ def main():
         header_writer.writerow(header)
 
     domain_errors = []
-    with open(filepath, 'r') as infile:
+    with open(domains_file, 'r') as infile:
         for domain in infile:
             domain = domain.strip()
             delay_info = domain_scanner(domain, apikey)
@@ -102,7 +90,6 @@ def main():
 
     if domain_errors:
         print(f'There were {len(domain_errors)} errors scanning domains: {domain_errors}')
-
 
 if __name__ == '__main__':
     main()

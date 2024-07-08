@@ -1,14 +1,14 @@
 __author__ = 'Matthew Clairmont'
-__version__ = '1.1'
+__version__ = '1.2'
 __date__ = 'July 8, 2024'
 
 import time
 import requests
 import csv
+import argparse
 from typing import List, Dict, Optional
 
-apikey = ''  # ENTER API KEY HERE
-
+# requests setup
 requests.urllib3.disable_warnings()
 client = requests.session()
 client.verify = False
@@ -16,7 +16,7 @@ domain_errors: List[str] = []
 delay: Dict[str, str] = {}
 
 
-def domain_scanner(domain: str) -> Optional[Dict[str, str]]:
+def domain_scanner(apikey: str, domain: str) -> Optional[Dict[str, str]]:
     url = 'https://www.virustotal.com/vtapi/v2/url/scan'
     params = {'apikey': apikey, 'url': domain}
     try:
@@ -41,7 +41,7 @@ def domain_scanner(domain: str) -> Optional[Dict[str, str]]:
         return None
 
 
-def domain_report_reader(domain: str, delay: bool) -> Optional[List[str]]:
+def domain_report_reader(apikey: str, domain: str, delay: bool) -> Optional[List[str]]:
     if delay:
         print(f'There was a delay in scanning {domain}. Waiting for 10s to ensure the report is ready.')
         time.sleep(10)
@@ -76,6 +76,14 @@ def domain_report_reader(domain: str, delay: bool) -> Optional[List[str]]:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="VirusTotal Domain Scanner")
+    parser.add_argument('--apikey', type=str, required=True, help='Your VirusTotal API key')
+    parser.add_argument('--domains_file', type=str, required=True, help='Path to the file containing domains')
+
+    args = parser.parse_args()
+    apikey = args.apikey
+    domains_file = args.domains_file
+
     # Open results file and write header
     try:
         with open('results.csv', 'w', newline='') as rfile:
@@ -89,12 +97,12 @@ def main():
         return
 
     try:
-        with open('domains.txt', 'r') as infile:
+        with open(domains_file, 'r') as infile:
             for domain in infile:
                 domain = domain.strip()
                 try:
-                    delay_info = domain_scanner(domain)
-                    data = domain_report_reader(domain, delay_info is not None)
+                    delay_info = domain_scanner(apikey, domain)
+                    data = domain_report_reader(apikey, domain, delay_info is not None)
                     if data:
                         with open('results.csv', 'a', newline='') as rfile:
                             data_writer = csv.writer(rfile)
